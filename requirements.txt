@@ -1,9 +1,0 @@
-llama-index
-huggingface-hub
-accelerate
-pillow
-diffusers
-langchain
-langchain-huggingface
-duckduckgo-search
-streamlit # NOUVELLE DÉPENDANCE
