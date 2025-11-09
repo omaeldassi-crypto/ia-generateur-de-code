@@ -1,23 +1,23 @@
 import streamlit as st
 from transformers import pipeline
 from PIL import Image, ImageDraw, ImageFont
-import os
+import io
 import datetime
 
 # -----------------------------------------------------
 # ⚙️ CONFIGURATION DE LA PAGE
 # -----------------------------------------------------
 st.set_page_config(
-    page_title="🤖 Assistant Multi-Capacités Léger",
+    page_title="🤖 Assistant IA Léger (GPT-2)",
     page_icon="🧠",
     layout="wide",
 )
 
 # -----------------------------------------------------
-# 🧠 EN-TÊTE DE L'APPLICATION
+# 🧠 TITRE ET DESCRIPTION
 # -----------------------------------------------------
-st.title("🧠 Assistant IA Léger – GPT-2 Edition")
-st.caption("💡 Chatbot capable de **générer du texte, du code et simuler des images** — compatible CPU.")
+st.title("🧠 Assistant IA Léger – GPT-2 Edition (CPU Friendly)")
+st.caption("💡 Chatbot textuel & simulateur d’images – 100 % compatible Streamlit Cloud (CPU only).")
 st.divider()
 
 # -----------------------------------------------------
@@ -25,16 +25,115 @@ st.divider()
 # -----------------------------------------------------
 @st.cache_resource
 def load_generator():
-    """Charge le modèle GPT-2 et le garde en cache."""
+    """Charge le modèle GPT-2 et le garde en cache pour éviter de le recharger."""
     return pipeline("text-generation", model="gpt2")
 
 generator = load_generator()
 
 # -----------------------------------------------------
-# 🖼️ GÉNÉRATION D’IMAGE SIMULÉE
+# 🖼️ SIMULATION D’IMAGE (EN MÉMOIRE)
 # -----------------------------------------------------
-def generer_image(prompt_image, output_filename):
-    """Simule la génération d'image (placeholder)."""
+def generer_image(prompt_image):
+    """Crée une image simulée (sans écriture disque, purement en mémoire)."""
+    img = Image.new('RGB', (512, 512), color=(45, 45, 65))
+    d = ImageDraw.Draw(img)
+
+    try:
+        font = ImageFont.truetype("arial.ttf", 26)
+    except IOError:
+        font = ImageFont.load_default()
+
+    texte = f"Simulation d'image :\n{prompt_image[:100]}..."
+    d.text((20, 230), texte, fill=(255, 255, 120), font=font)
+
+    # Conversion en mémoire (BytesIO)
+    img_bytes = io.BytesIO()
+    img.save(img_bytes, format="PNG")
+    img_bytes.seek(0)
+    return img_bytes
+
+# -----------------------------------------------------
+# 💬 INITIALISATION DU CHAT
+# -----------------------------------------------------
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+    st.session_state.memory = []  # mémoire courte
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": "👋 Bonjour ! Je suis un assistant IA léger propulsé par **GPT-2**. "
+                   "Demandez-moi de générer du texte, du code, ou tapez `!image votre prompt`."
+    })
+
+# -----------------------------------------------------
+# 🔄 AFFICHAGE DES MESSAGES
+# -----------------------------------------------------
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# -----------------------------------------------------
+# 🧠 SAISIE UTILISATEUR
+# -----------------------------------------------------
+if prompt := st.chat_input("💬 Écrivez ici pour discuter..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        with st.spinner("💭 L’IA réfléchit..."):
+            réponse_finale = ""
+
+            # 🖼️ Commande : !image
+            if prompt.lower().startswith("!image"):
+                prompt_image = prompt[6:].strip() or "Aucune description"
+                st.info(f"🎨 Simulation d'image pour : **{prompt_image}**")
+
+                img_bytes = generer_image(prompt_image)
+                st.image(img_bytes, caption=f"Image simulée : {prompt_image}")
+                réponse_finale = "Voici votre image simulée 🖼️ (CPU friendly)."
+
+            # 🧠 Commande : !mémoire
+            elif prompt.lower().startswith("!mémoire"):
+                mémoire_text = "\n".join(
+                    [f"- {m}" for m in st.session_state.memory[-5:]]
+                ) or "Mémoire vide."
+                réponse_finale = f"🧠 **Derniers sujets :**\n{mémoire_text}"
+
+            # 💬 Réponse textuelle classique
+            else:
+                try:
+                    contexte = " ".join(st.session_state.memory[-3:]) + " " + prompt
+                    result = generator(
+                        contexte,
+                        max_length=180,
+                        num_return_sequences=1,
+                        temperature=0.8,
+                        top_k=50,
+                        top_p=0.9,
+                        do_sample=True
+                    )[0]['generated_text']
+
+                    # Nettoyer la sortie
+                    if result.startswith(prompt):
+                        result = result[len(prompt):].strip()
+
+                    réponse_finale = result
+                    st.session_state.memory.append(prompt)
+                except Exception as e:
+                    réponse_finale = f"⚠️ Erreur : {e}"
+
+        st.markdown(réponse_finale)
+        st.session_state.messages.append({"role": "assistant", "content": réponse_finale})
+
+# -----------------------------------------------------
+# 🧾 PIED DE PAGE
+# -----------------------------------------------------
+st.divider()
+st.markdown("""
+<div style='text-align:center; color:gray; font-size:0.9em;'>
+🚀 Propulsé par GPT-2 via 🤗 Transformers | 100 % compatible Streamlit Cloud 🌐 | Interface améliorée 💬
+</div>
+""", unsafe_allow_html=True)    """Simule la génération d'image (placeholder)."""
     try:
         img = Image.new('RGB', (512, 512), color=(40, 40, 60))
         d = ImageDraw.Draw(img)
