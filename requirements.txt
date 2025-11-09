@@ -1,4 +1,2 @@
-streamlit
-transformers
-Pillow
-torch
+pip install streamlit transformers pillow
+streamlit run app.py
