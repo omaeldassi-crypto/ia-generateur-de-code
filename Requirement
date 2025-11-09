@@ -1,9 +1,0 @@
-streamlit
-transformers
-torch
-Pillow
-# Dépendances de l'Agent/Recherche
-langchain
-huggingface-hub
-accelerate
-duckduckgo-search
