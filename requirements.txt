@@ -1,21 +1,10 @@
-# =====================================================
-# 📦 Dépendances pour l'Assistant IA Léger – distilGPT-2
-# Compatible avec Streamlit Cloud (CPU)
-# =====================================================
+# Dépendances pour l'Assistant IA Léger – distilGPT-2
+# Compatible Streamlit Cloud (CPU)
 
-# 🖥️ Interface web
 streamlit==1.39.0
-
-# 🤗 Modèle de langage (GPT-2 allégé)
 transformers==4.44.2
-
-# 🔦 Backend PyTorch (version CPU uniquement)
 torch==2.1.0+cpu
 -f https://download.pytorch.org/whl/torch_stable.html
-
-# 🖼️ Gestion des images (simulation)
 Pillow==10.4.0
-
-# ⚙️ Librairies complémentaires
 tokenizers>=0.19.1
 requests>=2.31.0
