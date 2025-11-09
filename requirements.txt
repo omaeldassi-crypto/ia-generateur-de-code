@@ -1,9 +1,6 @@
 streamlit
 transformers
-torch
 Pillow
-# Dépendances de l'Agent/Recherche
-langchain
-huggingface-hub
-accelerate
-duckduckgo-search
+# PyTorch (torch) est la librairie la plus lourde. 
+# Cette version est souvent la plus compatible avec les CPU standards et les environnements limités.
+torch==2.3.1
