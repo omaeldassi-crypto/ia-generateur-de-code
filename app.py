@@ -1,223 +1,139 @@
 import streamlit as st
 from transformers import pipeline
-import os
 from PIL import Image, ImageDraw, ImageFont
+import os
+import datetime
 
-# --- Configuration de la Page Streamlit ---
+# -----------------------------------------------------
+# ⚙️ CONFIGURATION DE LA PAGE
+# -----------------------------------------------------
 st.set_page_config(
-    page_title="🤖 Chatbot Léger Multi-Capacités (Open Source)",
+    page_title="🤖 Assistant Multi-Capacités Léger",
+    page_icon="🧠",
     layout="wide",
-    initial_sidebar_state="expanded"
 )
 
-st.title("🧠 Assistant Générateur de Texte et Code Léger")
-st.caption("Propulsé par le modèle **GPT-2** (Hugging Face) pour la compatibilité avec les plateformes gratuites (CPU/mémoire limitée).")
+# -----------------------------------------------------
+# 🧠 EN-TÊTE DE L'APPLICATION
+# -----------------------------------------------------
+st.title("🧠 Assistant IA Léger – GPT-2 Edition")
+st.caption("💡 Chatbot capable de **générer du texte, du code et simuler des images** — compatible CPU.")
 st.divider()
 
-# --- Configuration et Chargement du Modèle (GPT-2) ---
-
+# -----------------------------------------------------
+# 🔁 CHARGEMENT DU MODÈLE GPT-2
+# -----------------------------------------------------
 @st.cache_resource
 def load_generator():
-    """Charge le pipeline du modèle GPT-2 (mis en cache)."""
-    print("Chargement du modèle GPT-2...")
-    # Le modèle est chargé et mis en cache pour ne pas être rechargé à chaque interaction
-    generator = pipeline("text-generation", model="gpt2")
-    return generator
+    """Charge le modèle GPT-2 et le garde en cache."""
+    return pipeline("text-generation", model="gpt2")
 
-# Charger le modèle une seule fois au démarrage
 generator = load_generator()
 
-
-# --- Fonctions pour la Génération d'Image (Simulée) ---
-
+# -----------------------------------------------------
+# 🖼️ GÉNÉRATION D’IMAGE SIMULÉE
+# -----------------------------------------------------
 def generer_image(prompt_image, output_filename):
-    """Simule la génération d'image et crée une image placeholder simple."""
+    """Simule la génération d'image (placeholder)."""
     try:
-        img = Image.new('RGB', (512, 512), color = 'red')
-        
-        # Ajouter un texte au centre
+        img = Image.new('RGB', (512, 512), color=(40, 40, 60))
         d = ImageDraw.Draw(img)
-        
-        # Essayer de charger une police par défaut
         try:
-            # Tente de charger une police pour un meilleur rendu
-            font = ImageFont.truetype("arial.ttf", 30)
+            font = ImageFont.truetype("arial.ttf", 28)
         except IOError:
-            # Si arial.ttf n'existe pas (souvent le cas sur les serveurs Linux)
             font = ImageFont.load_default()
-            
-        d.text((10,10), f"Image (CPU Only): {prompt_image}\n[Simulée, nécessite un GPU puissant]", fill=(255,255,0), font=font)
+        d.text((20, 230), f"Simulation d'image :\n{prompt_image}", fill=(255, 255, 100), font=font)
         img.save(output_filename)
         return True
     except Exception as e:
-        # Affiche l'erreur en cas de problème de simulation (rare)
-        st.error(f"Erreur de simulation d'image : {e}")
+        st.error(f"Erreur d'image : {e}")
         return False
 
-# --- Logique du Chatbot ---
-
-# Initialiser l'historique de la conversation
+# -----------------------------------------------------
+# 💬 INITIALISATION DE LA CONVERSATION
+# -----------------------------------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
-    # Message de bienvenue initial
-    st.session_state.messages.append({"role": "assistant", "content": "Bonjour ! Je suis basé sur GPT-2, capable de générer du texte et du code (utilisez la commande `!image` pour tester la capacité d'image simulée)." })
+    st.session_state.memory = []  # mémoire courte
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": "👋 Bonjour ! Je suis un assistant IA léger. "
+                   "Tapez une question, une commande `!image`, ou du code à générer."
+    })
 
-# Afficher les messages précédents
+# -----------------------------------------------------
+# 🔄 AFFICHAGE DES MESSAGES
+# -----------------------------------------------------
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Gestion de la nouvelle entrée utilisateur
-if prompt := st.chat_input("Dites bonjour ou demandez 'Écris une fonction Python...'"):
-    # 1. Ajouter le message utilisateur
+# -----------------------------------------------------
+# 💡 ENTRÉE UTILISATEUR
+# -----------------------------------------------------
+if prompt := st.chat_input("💬 Écrivez votre message ici..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # 2. Préparer la réponse du bot
+    # -------------------------------------------------
+    # 🧩 GÉNÉRATION DE RÉPONSE
+    # -------------------------------------------------
     with st.chat_message("assistant"):
-        with st.spinner("L'IA génère la réponse..."):
-            
-            # --- LOGIQUE DU CHATBOT (Capacités Légères) ---
+        with st.spinner("L’IA réfléchit..."):
+            réponse_finale = ""
 
+            # 🖼️ Commande spéciale : génération d'image simulée
             if prompt.lower().startswith("!image"):
-                # Capacité: Génération d'Image (simulée)
-                prompt_image = prompt[6:].strip()
-                filename = "temp_image_output.png"
-                
-                st.text(f"🎨 Simulation de la génération d'image pour : {prompt_image}")
-                
-                if generer_image(prompt_image, filename):
-                    st.image(filename, caption=f"Image Simulée pour : {prompt_image}")
-                    st.success("La génération d'image a été simulée avec succès. La vraie version nécessite un GPU.")
-                    réponse_finale = "Voici l'image que j'ai créée (simulation CPU)."
-                    
-                    # Nettoyage
-                    os.remove(filename) 
-                else:
-                    réponse_finale = "Échec de la simulation d'image."
+                prompt_image = prompt[6:].strip() or "Aucune description fournie"
+                filename = f"image_{datetime.datetime.now().strftime('%H%M%S')}.png"
+                st.info(f"🎨 Simulation d'image pour : **{prompt_image}**")
 
+                if generer_image(prompt_image, filename):
+                    st.image(filename, caption=f"Image simulée : {prompt_image}")
+                    réponse_finale = "Voici votre image simulée. (💡 La vraie génération nécessite un GPU)"
+                    os.remove(filename)
+                else:
+                    réponse_finale = "⚠️ Impossible de générer l'image simulée."
+
+            # 🧠 Commande spéciale : mémoire
+            elif prompt.lower().startswith("!mémoire"):
+                mémoire_text = "\n".join([f"- {m}" for m in st.session_state.memory[-5:]]) or "Mémoire vide."
+                réponse_finale = f"🧠 **Mémoire récente :**\n{mémoire_text}"
+
+            # 💬 Réponse GPT-2 (texte / code / discussion)
             else:
-                # Capacité: Texte/Code/Chat (via GPT-2)
                 try:
-                    response_text = generator(
-                        prompt,
-                        max_length=250,  # Longueur maximale
+                    input_text = " ".join(st.session_state.memory[-3:]) + " " + prompt
+                    response = generator(
+                        input_text,
+                        max_length=200,
                         num_return_sequences=1,
                         do_sample=True,
-                        temperature=0.7 # Température pour un peu de créativité
+                        temperature=0.8,
+                        top_k=50,
+                        top_p=0.95
                     )[0]['generated_text']
 
-                    # Nettoyer la réponse pour enlever l'écho du prompt
-                    if response_text.startswith(prompt):
-                        réponse_finale = response_text[len(prompt):].strip()
-                    else:
-                        réponse_finale = response_text
-                        
+                    # Nettoyage
+                    if response.startswith(prompt):
+                        response = response[len(prompt):].strip()
+
+                    réponse_finale = response
+                    st.session_state.memory.append(prompt)  # stocke la mémoire courte
                 except Exception as e:
-                    st.error(f"Erreur de génération de texte : {e}")
-                    réponse_finale = "Désolé, une erreur est survenue lors de la génération de la réponse textuelle."
+                    st.error(f"Erreur du modèle : {e}")
+                    réponse_finale = "❌ Erreur de génération de texte."
 
-
-        # 3. Affichage et sauvegarde de la réponse
         st.markdown(réponse_finale)
         st.session_state.messages.append({"role": "assistant", "content": réponse_finale})
 
-# --- Lancement de l'application ---
-if __name__ == "__main__":
-    pass 
-    """Simule la génération d'image et crée une image placeholder simple."""
-    try:
-        img = Image.new('RGB', (512, 512), color = 'red')
-        
-        # Ajouter un texte au centre
-        from PIL import ImageDraw, ImageFont
-        d = ImageDraw.Draw(img)
-        
-        # Essayer de charger une police par défaut
-        try:
-            font = ImageFont.truetype("arial.ttf", 30)
-        except IOError:
-            font = ImageFont.load_default()
-            
-        d.text((10,10), f"Image (CPU Only): {prompt_image}\n[Simulée, nécessite un GPU puissant]", fill=(255,255,0), font=font)
-        img.save(output_filename)
-        return True
-    except Exception as e:
-        st.error(f"Erreur de simulation d'image : {e}")
-        return False
-
-# --- Logique du Chatbot ---
-
-# Initialiser l'historique de la conversation
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-    # Message de bienvenue initial
-    st.session_state.messages.append({"role": "assistant", "content": "Bonjour ! Je suis basé sur GPT-2, capable de générer du texte et du code (utilisez la commande `!image` pour tester la capacité d'image simulée)." })
-
-# Afficher les messages précédents
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# Gestion de la nouvelle entrée utilisateur
-if prompt := st.chat_input("Dites bonjour ou demandez 'Écris une fonction Python...'"):
-    # 1. Ajouter le message utilisateur
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    # 2. Préparer la réponse du bot
-    with st.chat_message("assistant"):
-        with st.spinner("L'IA génère la réponse..."):
-            
-            # --- LOGIQUE DU CHATBOT (Capacités Légères) ---
-
-            if prompt.lower().startswith("!image"):
-                # Capacité: Génération d'Image (simulée)
-                prompt_image = prompt[6:].strip()
-                filename = "temp_image_output.png"
-                
-                st.text(f"🎨 Simulation de la génération d'image pour : {prompt_image}")
-                
-                if generer_image(prompt_image, filename):
-                    st.image(filename, caption=f"Image Simulée pour : {prompt_image}")
-                    st.success("La génération d'image a été simulée avec succès. La vraie version nécessite un GPU.")
-                    réponse_finale = "Voici l'image que j'ai créée (simulation CPU)."
-                    
-                    # Nettoyage
-                    os.remove(filename) 
-                else:
-                    réponse_finale = "Échec de la simulation d'image."
-
-            else:
-                # Capacité: Texte/Code/Chat (via GPT-2)
-                try:
-                    response_text = generator(
-                        prompt,
-                        max_length=250,  # Longueur maximale
-                        num_return_sequences=1,
-                        do_sample=True,
-                        temperature=0.7 # Température pour un peu de créativité
-                    )[0]['generated_text']
-
-                    # Nettoyer la réponse pour enlever l'écho du prompt
-                    if response_text.startswith(prompt):
-                        réponse_finale = response_text[len(prompt):].strip()
-                    else:
-                        réponse_finale = response_text
-                        
-                except Exception as e:
-                    st.error(f"Erreur de génération de texte : {e}")
-                    réponse_finale = "Désolé, une erreur est survenue lors de la génération de la réponse textuelle."
-
-
-        # 3. Affichage et sauvegarde de la réponse
-        st.markdown(réponse_finale)
-        st.session_state.messages.append({"role": "assistant", "content": réponse_finale})
-
-# --- Lancement de l'application ---
-if __name__ == "__main__":
-    # La logique principale est déjà exécutée par le flux Streamlit,
-    # cette vérification est surtout un standard Python.
-    pass 
+# -----------------------------------------------------
+# 🎛️ PIED DE PAGE
+# -----------------------------------------------------
+st.divider()
+st.markdown("""
+<div style='text-align:center; color:gray; font-size:0.9em;'>
+Propulsé par 🤗 Hugging Face | Conçu pour CPU | Interface Streamlit améliorée ✨
+</div>
+""", unsafe_allow_html=True)
