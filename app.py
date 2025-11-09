@@ -3,24 +3,21 @@ from transformers import pipeline
 from PIL import Image, ImageDraw, ImageFont
 import io
 
-# -----------------------------------------------------
+# ---------------------------
 # CONFIGURATION DE LA PAGE
-# -----------------------------------------------------
+# ---------------------------
 st.set_page_config(
     page_title="Assistant IA Léger – distilGPT-2",
     layout="wide",
 )
 
-# -----------------------------------------------------
-# TITRE ET DESCRIPTION
-# -----------------------------------------------------
 st.title("Assistant IA Léger – distilGPT-2")
 st.caption("Chatbot de génération de texte et simulation d’images – compatible Streamlit Cloud (CPU uniquement).")
 st.divider()
 
-# -----------------------------------------------------
-# CHARGEMENT DU MODÈLE (DISTILGPT-2)
-# -----------------------------------------------------
+# ---------------------------
+# CHARGEMENT DU MODÈLE
+# ---------------------------
 @st.cache_resource
 def load_model():
     try:
@@ -32,9 +29,102 @@ def load_model():
 
 generator = load_model()
 
-# -----------------------------------------------------
-# FONCTION DE GÉNÉRATION D’IMAGE SIMULÉE
-# -----------------------------------------------------
+# ---------------------------
+# GÉNÉRATION D’IMAGE SIMULÉE
+# ---------------------------
+def generer_image(prompt_image: str):
+    img = Image.new('RGB', (512, 512), color=(40, 40, 65))
+    draw = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.truetype("arial.ttf", 24)
+    except IOError:
+        font = ImageFont.load_default()
+    texte = f"Simulation :\n{prompt_image[:90]}..."
+    draw.text((20, 230), texte, fill=(255, 255, 100), font=font)
+    img_bytes = io.BytesIO()
+    img.save(img_bytes, format="PNG")
+    img_bytes.seek(0)
+    return img_bytes
+
+# ---------------------------
+# HISTORIQUE DU CHAT
+# ---------------------------
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+    st.session_state.memory = []
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": "Bonjour ! Je suis un assistant IA léger basé sur distilGPT-2.\n"
+                   "Utilisez '!image <description>' pour générer une image simulée."
+    })
+
+def afficher_historique():
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+afficher_historique()
+
+# ---------------------------
+# ENTRÉE UTILISATEUR
+# ---------------------------
+if prompt := st.chat_input("Entrez votre message ici..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    
+    with st.chat_message("assistant"):
+        with st.spinner("L'IA réfléchit..."):
+            réponse_finale = ""
+
+            # Commande !image
+            if prompt.lower().startswith("!image"):
+                prompt_image = prompt[6:].strip() or "Aucune description"
+                st.info(f"Simulation d'image pour : {prompt_image}")
+                img_bytes = generer_image(prompt_image)
+                st.image(img_bytes, caption=f"Image simulée : {prompt_image}")
+                réponse_finale = "Voici une image simulée (version CPU)."
+
+            # Commande !mémoire
+            elif prompt.lower().startswith("!mémoire"):
+                mémoire_text = "\n".join(
+                    [f"- {m}" for m in st.session_state.memory[-5:]]
+                ) or "Mémoire vide."
+                réponse_finale = f"Derniers sujets :\n{mémoire_text}"
+
+            # Réponse textuelle via distilGPT-2
+            elif generator:
+                try:
+                    contexte = " ".join(st.session_state.memory[-2:]) + " " + prompt
+                    result = generator(
+                        contexte,
+                        max_length=100,
+                        num_return_sequences=1,
+                        temperature=0.8,
+                        top_k=50,
+                        top_p=0.9,
+                        do_sample=True
+                    )[0]['generated_text']
+
+                    if result.startswith(prompt):
+                        result = result[len(prompt):].strip()
+
+                    réponse_finale = result
+                    st.session_state.memory.append(prompt)
+                except Exception as e:
+                    réponse_finale = f"Erreur pendant la génération : {e}"
+            else:
+                réponse_finale = "Le modèle n’a pas pu être chargé."
+
+        st.session_state.messages.append({"role": "assistant", "content": réponse_finale})
+        st.markdown(réponse_finale)
+
+st.divider()
+st.markdown("""
+<div style='text-align:center; color:gray; font-size:0.9em;'>
+Propulsé par distilGPT-2 | Compatible Streamlit Cloud | CPU uniquement
+</div>
+""", unsafe_allow_html=True)# -----------------------------------------------------
 def generer_image(prompt_image: str):
     """Crée une image simulée directement en mémoire."""
     img = Image.new('RGB', (512, 512), color=(40, 40, 65))
