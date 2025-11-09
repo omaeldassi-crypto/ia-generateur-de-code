@@ -1,2 +1,4 @@
-pip install streamlit transformers pillow
-streamlit run app.py
+streamlit==1.39.0
+transformers==4.44.2
+torch>=2.0.0
+Pillow==10.4.0
